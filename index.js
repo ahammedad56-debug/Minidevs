@@ -27,10 +27,11 @@
  *   events: checkout.session.completed, customer.subscription.deleted
  */
 
-const express = require('express');
-const multer = require('multer');
-const axios = require('axios');
-const FormData = require('form-data');
-const Stripe = require('stripe');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+let express, multer, axios, FormData, Stripe, createClient;
+try {
+  express = require('express');
+  multer = require('multer');
+  axios = require('axios');
+  FormData = require('form-data');
+  Stripe = require('stripe');
