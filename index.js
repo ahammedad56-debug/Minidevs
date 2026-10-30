@@ -236,7 +236,10 @@ app.post('/auth/signup', async (req, res) => {
     const { email, password } = req.body || {};
     if (!email || !password || password.length < 6)
       return res.status(400).json({ error: 'Valid email and a 6+ character password are required.' });
-    const { data, error } = await anon.auth.signUp({ email, password });
+    const base = APP_URL || req.protocol + '://' + req.get('host');
+    const { data, error } = await anon.auth.signUp({
+      email, password, options: { emailRedirectTo: base + '/' },
+    });
     if (error) return res.status(400).json({ error: error.message });
     if (data.user) await (admin || userClient(data.session ? data.session.access_token : ''))
       .from('profiles').upsert({ id: data.user.id }, { ignoreDuplicates: true });
@@ -481,6 +484,9 @@ $('checkoutBtn').onclick = async function () {
     window.location.href = d.url;
   } catch (e) { toast(e.message, false); btn.disabled = false; }
 };
+var h = location.hash || '';
+if (h.indexOf('error=') > -1) { toast('That confirmation link expired. Sign up again.', false); history.replaceState({}, '', '/'); }
+else if (h.indexOf('access_token') > -1 || h.indexOf('type=signup') > -1) { toast('Email confirmed! Please log in.', true); history.replaceState({}, '', '/'); }
 var q = new URLSearchParams(location.search).get('checkout');
 if (q === 'success') toast('Payment received! Premium activates in a few seconds.', true);
 if (q === 'cancel') toast('Checkout canceled.', false);
