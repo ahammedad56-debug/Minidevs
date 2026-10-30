@@ -253,6 +253,36 @@ app.post('/auth/signup', async (req, res) => {
   }
 });
 
+app.post('/auth/verify', async (req, res) => {
+  try {
+    const { email, code } = req.body || {};
+    const token = String(code || '').trim();
+    if (!email || !/^\d{6,10}$/.test(token)) return res.status(400).json({ error: 'Enter the numeric code from your email.' });
+    const { data, error } = await anon.auth.verifyOtp({ email, token, type: 'signup' });
+    if (error || !data.session) return res.status(400).json({ error: 'Invalid or expired code.' });
+    if (admin) await admin.from('profiles').upsert({ id: data.user.id }, { ignoreDuplicates: true });
+    log('INFO', 'Email confirmed', data.user.id);
+    res.json({ token: data.session.access_token });
+  } catch (e) {
+    log('ERROR', 'Verify', e.message);
+    res.status(500).json({ error: 'Confirmation failed.' });
+  }
+});
+
+app.post('/auth/resend', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const base = APP_URL || req.protocol + '://' + req.get('host');
+    const { error } = await anon.auth.resend({ type: 'signup', email, options: { emailRedirectTo: base + '/' } });
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (e) {
+    log('ERROR', 'Resend', e.message);
+    res.status(500).json({ error: 'Could not resend code.' });
+  }
+});
+
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -339,81 +369,133 @@ const PAGE = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0d14">
+<meta name="theme-color" content="#e10600">
 <title>MiniDevs</title>
+<script>
+(function(){var t=null;try{t=localStorage.getItem('md_theme');}catch(e){}
+var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+document.documentElement.classList.toggle('dark',d);})();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--bg:#fff;--fg:#000;--red:#e10600;--mut:.7}
+html.dark{--bg:#000;--fg:#fff}
+body{background:var(--bg);color:var(--fg);font-family:Impact,'Arial Black',system-ui,sans-serif}
+.card{border:2px solid var(--fg);background:var(--bg);position:relative;padding:1.5rem 1.25rem 1.25rem}
+.card:before{content:"";position:absolute;left:-2px;right:-2px;top:-2px;height:7px;background:var(--red)}
+.h{font-size:1.5rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;margin:0 0 1rem}
+.lbl{display:block;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;margin:0 0 .35rem}
+.inp{width:100%;background:transparent;color:var(--fg);border:2px solid var(--fg);padding:.85rem 1rem;font-size:16px;border-radius:0;outline:none;margin-bottom:1rem;font-family:system-ui,sans-serif}
+.inp:focus{border-color:var(--red)}
+.code{text-align:center;font-size:2rem;letter-spacing:.6em;font-weight:900}
+.btn{display:block;width:100%;padding:1rem;font-weight:900;letter-spacing:.28em;text-transform:uppercase;border:2px solid var(--red);border-radius:0;background:var(--red);color:#fff}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5}
+.btn-o{background:transparent;color:var(--fg);border-color:var(--fg)}
+.lnk{background:none;border:0;color:var(--fg);font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;text-decoration:underline;text-underline-offset:5px;padding:.5rem 0}
+.mut{opacity:var(--mut);font-family:system-ui,sans-serif;font-size:.875rem}
+.tag{font-size:11px;font-weight:900;letter-spacing:.2em;padding:.3rem .6rem;border:2px solid var(--fg)}
+.tag-p{background:var(--red);border-color:var(--red);color:#fff}
+.track{height:18px;border:2px solid var(--fg)}
+.fill{height:100%;width:0;background:var(--red);transition:width .5s}
+.toast{position:fixed;bottom:1.5rem;left:5%;right:5%;max-width:24rem;margin:0 auto;text-align:center;padding:1rem;font:800 12px/1.4 system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;z-index:50}
+.toast-ok{background:var(--fg);color:var(--bg);border:2px solid var(--red)}
+.toast-err{background:var(--red);color:#fff;border:2px solid var(--fg)}
+input[type=file]::file-selector-button{background:var(--red);color:#fff;border:0;padding:.6rem 1rem;margin-right:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;border-radius:0}
+</style>
 </head>
-<body class="bg-[#0b0d14] text-slate-100 min-h-screen antialiased" style="padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
-<div class="max-w-md mx-auto px-4 pb-16">
-  <header class="py-8 text-center">
-    <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-3xl shadow-lg shadow-indigo-500/30">&#9651;</div>
-    <h1 class="mt-4 text-3xl font-extrabold tracking-tight">Mini<span class="text-indigo-400">Devs</span></h1>
-    <p class="mt-1 text-slate-400 text-sm">Upload 3D meshes to Roblox from your phone.</p>
+<body class="min-h-screen antialiased" style="padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
+<div class="max-w-md mx-auto px-5 pb-16">
+  <div class="flex justify-end pt-4"><button id="themeBtn" class="lnk">Light / Dark</button></div>
+  <header class="pt-2 pb-8 text-center">
+    <svg class="mx-auto" width="96" height="70" viewBox="100 360 860 570" fill="none" stroke="#e10600" stroke-width="30" stroke-linecap="round" aria-label="MiniDevs logo">
+      <ellipse cx="552" cy="475" rx="198" ry="93"/>
+      <path d="M310 659 C262 715 180 790 133 861"/>
+      <path d="M769 701 L880 830 C905 858 918 880 928 906"/>
+    </svg>
+    <h1 class="mt-4 text-4xl font-black tracking-[.22em] uppercase">Mini<span style="color:var(--red)">Devs</span></h1>
+    <p class="mt-2 text-xs font-black tracking-[.3em] uppercase" style="opacity:.75">Restricted access // Builders only</p>
   </header>
 
-  <section id="authView" class="hidden bg-white/5 border border-white/10 rounded-3xl p-5">
-    <h2 class="font-bold text-lg mb-3">Sign in to start</h2>
-    <label class="text-xs text-slate-400" for="email">Email</label>
-    <input id="email" type="email" autocomplete="email" class="w-full mb-3 mt-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-400">
-    <label class="text-xs text-slate-400" for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password" class="w-full mb-4 mt-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-400">
-    <div class="grid grid-cols-2 gap-3">
-      <button id="loginBtn" class="py-3 rounded-xl bg-indigo-500 font-semibold active:scale-95 transition">Log In</button>
-      <button id="signupBtn" class="py-3 rounded-xl bg-white/10 font-semibold active:scale-95 transition">Sign Up</button>
-    </div>
+  <section id="loginView" class="card hidden">
+    <h2 class="h">Log In</h2>
+    <label class="lbl" for="lEmail">Gmail</label>
+    <input id="lEmail" type="email" autocomplete="email" class="inp" placeholder="you@gmail.com">
+    <label class="lbl" for="lPass">Password</label>
+    <input id="lPass" type="password" autocomplete="current-password" class="inp">
+    <button id="loginBtn" class="btn">Log In</button>
+    <div class="mt-4 flex items-center justify-between"><span class="mut">No account?</span><button id="toSignup" class="lnk">Sign up</button></div>
   </section>
 
-  <main id="appView" class="hidden space-y-4">
-    <section class="bg-white/5 border border-white/10 rounded-3xl p-5">
-      <div class="flex items-center justify-between">
-        <h2 class="font-bold">Daily Limit</h2>
-        <span id="tierBadge" class="text-xs px-2.5 py-1 rounded-full bg-slate-700">FREE</span>
-      </div>
-      <div class="mt-3 h-3 rounded-full bg-black/40 overflow-hidden"><div id="bar" class="h-full w-0 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all duration-500"></div></div>
-      <p id="usageText" class="mt-2 text-sm text-slate-400">Loading...</p>
+  <section id="signupView" class="card hidden">
+    <h2 class="h">Create Account</h2>
+    <label class="lbl" for="sEmail">Your Gmail</label>
+    <input id="sEmail" type="email" autocomplete="email" class="inp" placeholder="you@gmail.com">
+    <label class="lbl" for="sPass">Create password</label>
+    <input id="sPass" type="password" autocomplete="new-password" class="inp">
+    <label class="lbl" for="sPass2">Confirm password</label>
+    <input id="sPass2" type="password" autocomplete="new-password" class="inp">
+    <button id="signupBtn" class="btn">Create Account</button>
+    <div class="mt-4"><button id="toLogin1" class="lnk">&larr; Back to log in</button></div>
+  </section>
+
+  <section id="verifyView" class="card hidden">
+    <h2 class="h">Check Your Gmail</h2>
+    <p class="mut mb-4">We sent a confirmation code to <b id="vEmail"></b>. Enter it below to activate your account.</p>
+    <label class="lbl" for="vCode">Confirmation code</label>
+    <input id="vCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" class="inp code" placeholder="000000">
+    <button id="verifyBtn" class="btn">Confirm</button>
+    <div class="mt-4 flex items-center justify-between"><button id="resendBtn" class="lnk">Resend code</button><button id="toSignup2" class="lnk">Wrong email?</button></div>
+  </section>
+
+  <main id="appView" class="hidden space-y-6">
+    <section class="card">
+      <div class="flex items-center justify-between mb-4"><h2 class="h" style="margin:0">Daily Limit</h2><span id="tierBadge" class="tag">FREE</span></div>
+      <div class="track"><div id="bar" class="fill"></div></div>
+      <p id="usageText" class="mut mt-3">Loading...</p>
     </section>
 
-    <section class="bg-white/5 border border-white/10 rounded-3xl p-5">
-      <h2 class="font-bold mb-3">Upload a mesh</h2>
-      <label class="text-xs text-slate-400" for="assetName">Asset name</label>
-      <input id="assetName" maxlength="50" placeholder="e.g. Castle Tower" class="w-full mb-3 mt-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-indigo-400">
-      <label class="text-xs text-slate-400" for="file">Model file (.fbx / .obj, max 20MB)</label>
-      <input id="file" type="file" accept=".fbx,.obj" class="w-full mb-4 mt-1 text-sm text-slate-300 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-500/20 file:text-indigo-300 file:font-semibold">
-      <button id="uploadBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-fuchsia-500 font-bold active:scale-95 transition disabled:opacity-50">Upload to Roblox</button>
+    <section class="card">
+      <h2 class="h">Upload Mesh</h2>
+      <label class="lbl" for="assetName">Asset name</label>
+      <input id="assetName" maxlength="50" class="inp" placeholder="Castle Tower">
+      <label class="lbl" for="file">Model file (.fbx / .obj, max 20MB)</label>
+      <input id="file" type="file" accept=".fbx,.obj" class="inp" style="padding:.6rem">
+      <button id="uploadBtn" class="btn">Upload to Roblox</button>
     </section>
 
-    <section id="payPanel" class="rounded-3xl p-5 border border-indigo-400/30 bg-gradient-to-br from-indigo-500/15 to-fuchsia-500/10">
-      <h2 class="font-bold text-lg">Go Premium</h2>
-      <p class="text-3xl font-extrabold mt-1">$8.99<span class="text-base font-medium text-slate-400">/month</span></p>
-      <ul class="mt-3 text-sm text-slate-300 space-y-1">
-        <li>&#10003; Unlimited daily uploads</li>
-        <li>&#10003; Instant activation after checkout</li>
-        <li>&#10003; Cancel anytime</li>
-      </ul>
-      <button id="checkoutBtn" class="mt-4 w-full py-3.5 rounded-xl bg-white text-slate-900 font-bold active:scale-95 transition">Upgrade with Stripe</button>
+    <section id="payPanel" class="card" style="border-color:var(--red)">
+      <h2 class="h">Go Premium</h2>
+      <p style="font-size:2.75rem;font-weight:900;line-height:1">$8.99<span class="mut"> /month</span></p>
+      <ul class="mut mt-3 mb-4" style="line-height:1.8"><li>&#9632; Unlimited daily uploads</li><li>&#9632; Instant activation after checkout</li><li>&#9632; Cancel anytime</li></ul>
+      <button id="checkoutBtn" class="btn">Upgrade with Stripe</button>
     </section>
 
-    <div class="flex items-center justify-between text-sm text-slate-500 px-1">
-      <span id="who"></span><button id="logoutBtn" class="underline">Log out</button>
-    </div>
+    <div class="flex items-center justify-between"><span id="who" class="mut"></span><button id="logoutBtn" class="lnk">Log out</button></div>
   </main>
 </div>
 <div id="toast" class="hidden"></div>
 
 <script>
 var $ = function (id) { return document.getElementById(id); };
-var token = null;
-try { token = localStorage.getItem('bm_token'); } catch (e) {}
+var token = null, pending = '';
+try { token = localStorage.getItem('md_token'); } catch (e) {}
+var VIEWS = ['loginView', 'signupView', 'verifyView', 'appView'];
 
 function toast(msg, ok) {
   var t = $('toast');
   t.textContent = msg;
-  t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm text-center px-4 py-3 rounded-2xl text-sm font-medium shadow-xl ' + (ok ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white');
-  setTimeout(function () { t.className = 'hidden'; }, 4500);
+  t.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err');
+  clearTimeout(toast.h);
+  toast.h = setTimeout(function () { t.className = 'hidden'; }, 4500);
+}
+function view(n) {
+  VIEWS.forEach(function (v) { $(v).classList.toggle('hidden', v !== n); });
+  window.scrollTo(0, 0);
 }
 function setToken(v) {
   token = v;
-  try { v ? localStorage.setItem('bm_token', v) : localStorage.removeItem('bm_token'); } catch (e) {}
+  try { v ? localStorage.setItem('md_token', v) : localStorage.removeItem('md_token'); } catch (e) {}
 }
 async function api(url, opts) {
   opts = opts || {};
@@ -422,73 +504,106 @@ async function api(url, opts) {
   var res = await fetch(url, opts);
   var data = {};
   try { data = await res.json(); } catch (e) {}
-  if (res.status === 401 && token) { setToken(null); show(false); }
+  if (res.status === 401 && token) { setToken(null); view('loginView'); }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
-function show(loggedIn) {
-  $('authView').classList.toggle('hidden', loggedIn);
-  $('appView').classList.toggle('hidden', !loggedIn);
+function post(url, body) {
+  return api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+async function run(btn, fn) {
+  btn.disabled = true;
+  try { await fn(); } catch (e) { toast(e.message, false); }
+  btn.disabled = false;
 }
 async function refresh() {
-  if (!token) return show(false);
+  if (!token) return view('loginView');
   try {
     var s = await api('/status');
-    show(true);
+    view('appView');
     $('who').textContent = s.email;
     $('tierBadge').textContent = s.premium ? 'PREMIUM' : 'FREE';
-    $('tierBadge').className = 'text-xs px-2.5 py-1 rounded-full ' + (s.premium ? 'bg-fuchsia-500 text-white' : 'bg-slate-700');
+    $('tierBadge').className = 'tag' + (s.premium ? ' tag-p' : '');
     $('payPanel').classList.toggle('hidden', s.premium);
     if (s.premium) {
       $('bar').style.width = '100%';
       $('usageText').textContent = 'Unlimited uploads. ' + s.used + ' used today.';
     } else {
       $('bar').style.width = Math.min(100, (s.used / s.limit) * 100) + '%';
-      $('usageText').textContent = s.used + ' of ' + s.limit + ' free uploads used today. Resets at 00:00 UTC.';
+      $('usageText').textContent = s.used + ' of ' + s.limit + ' free uploads used today. Resets 00:00 UTC.';
     }
   } catch (e) { toast(e.message, false); }
 }
-async function auth(mode) {
-  var btn = $(mode + 'Btn'); btn.disabled = true;
-  try {
-    var d = await api('/auth/' + mode, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: $('email').value.trim(), password: $('password').value }),
-    });
-    if (d.token) { setToken(d.token); await refresh(); } else toast(d.message, true);
-  } catch (e) { toast(e.message, false); }
-  btn.disabled = false;
-}
-$('loginBtn').onclick = function () { auth('login'); };
-$('signupBtn').onclick = function () { auth('signup'); };
-$('logoutBtn').onclick = function () { setToken(null); show(false); };
-$('uploadBtn').onclick = async function () {
-  var name = $('assetName').value.trim(), f = $('file').files[0];
-  if (!name || !f) return toast('Enter a name and choose a file.', false);
-  var btn = $('uploadBtn'); btn.disabled = true; btn.textContent = 'Uploading...';
-  try {
+
+$('themeBtn').onclick = function () {
+  var d = document.documentElement.classList.toggle('dark');
+  try { localStorage.setItem('md_theme', d ? 'dark' : 'light'); } catch (e) {}
+};
+$('toSignup').onclick = $('toSignup2').onclick = function () { view('signupView'); };
+$('toLogin1').onclick = function () { view('loginView'); };
+$('logoutBtn').onclick = function () { setToken(null); view('loginView'); };
+
+$('loginBtn').onclick = function () {
+  run(this, async function () {
+    var d = await post('/auth/login', { email: $('lEmail').value.trim(), password: $('lPass').value });
+    setToken(d.token);
+    await refresh();
+  });
+};
+$('signupBtn').onclick = function () {
+  run(this, async function () {
+    var e = $('sEmail').value.trim(), p = $('sPass').value;
+    if (!e) throw new Error('Enter your Gmail.');
+    if (p.length < 6) throw new Error('Password needs 6+ characters.');
+    if (p !== $('sPass2').value) throw new Error('Passwords do not match.');
+    var d = await post('/auth/signup', { email: e, password: p });
+    if (d.token) { setToken(d.token); await refresh(); return; }
+    pending = e;
+    $('vEmail').textContent = e;
+    $('vCode').value = '';
+    view('verifyView');
+    toast('Code sent. Check your Gmail.', true);
+  });
+};
+$('verifyBtn').onclick = function () {
+  run(this, async function () {
+    var d = await post('/auth/verify', { email: pending, code: $('vCode').value.trim() });
+    setToken(d.token);
+    toast('Account confirmed. Welcome.', true);
+    await refresh();
+  });
+};
+$('resendBtn').onclick = function () {
+  run(this, async function () {
+    await post('/auth/resend', { email: pending });
+    toast('New code sent.', true);
+  });
+};
+$('uploadBtn').onclick = function () {
+  run(this, async function () {
+    var name = $('assetName').value.trim(), f = $('file').files[0];
+    if (!name || !f) throw new Error('Enter a name and choose a file.');
     var fd = new FormData();
     fd.append('assetName', name);
     fd.append('file', f);
     var d = await api('/upload', { method: 'POST', body: fd });
     toast(d.message, true);
     $('assetName').value = ''; $('file').value = '';
-  } catch (e) { toast(e.message, false); }
-  btn.disabled = false; btn.textContent = 'Upload to Roblox';
-  refresh();
+    refresh();
+  });
 };
-$('checkoutBtn').onclick = async function () {
-  var btn = $('checkoutBtn'); btn.disabled = true;
-  try {
+$('checkoutBtn').onclick = function () {
+  run(this, async function () {
     var d = await api('/create-checkout-session', { method: 'POST' });
     window.location.href = d.url;
-  } catch (e) { toast(e.message, false); btn.disabled = false; }
+  });
 };
+
 var h = location.hash || '';
 if (h.indexOf('error=') > -1) { toast('That confirmation link expired. Sign up again.', false); history.replaceState({}, '', '/'); }
-else if (h.indexOf('access_token') > -1 || h.indexOf('type=signup') > -1) { toast('Email confirmed! Please log in.', true); history.replaceState({}, '', '/'); }
+else if (h.indexOf('access_token') > -1 || h.indexOf('type=signup') > -1) { toast('Email confirmed. Please log in.', true); history.replaceState({}, '', '/'); }
 var q = new URLSearchParams(location.search).get('checkout');
-if (q === 'success') toast('Payment received! Premium activates in a few seconds.', true);
+if (q === 'success') toast('Payment received. Premium activates in seconds.', true);
 if (q === 'cancel') toast('Checkout canceled.', false);
 if (q) history.replaceState({}, '', '/');
 refresh();
