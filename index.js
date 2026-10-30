@@ -369,52 +369,50 @@ const PAGE = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#e10600">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <title>MiniDevs</title>
-<script>
-(function(){var t=null;try{t=localStorage.getItem('md_theme');}catch(e){}
-var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
-document.documentElement.classList.toggle('dark',d);})();
-</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-:root{--bg:#fff;--fg:#000;--red:#e10600;--mut:.7}
-html.dark{--bg:#000;--fg:#fff}
-body{background:var(--bg);color:var(--fg);font-family:Impact,'Arial Black',system-ui,sans-serif}
-.card{border:2px solid var(--fg);background:var(--bg);position:relative;padding:1.5rem 1.25rem 1.25rem}
-.card:before{content:"";position:absolute;left:-2px;right:-2px;top:-2px;height:7px;background:var(--red)}
-.h{font-size:1.5rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;margin:0 0 1rem}
-.lbl{display:block;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;margin:0 0 .35rem}
-.inp{width:100%;background:transparent;color:var(--fg);border:2px solid var(--fg);padding:.85rem 1rem;font-size:16px;border-radius:0;outline:none;margin-bottom:1rem;font-family:system-ui,sans-serif}
-.inp:focus{border-color:var(--red)}
-.code{text-align:center;font-size:2rem;letter-spacing:.6em;font-weight:900}
-.btn{display:block;width:100%;padding:1rem;font-weight:900;letter-spacing:.28em;text-transform:uppercase;border:2px solid var(--red);border-radius:0;background:var(--red);color:#fff}
-.btn:active{transform:scale(.98)}
+:root{color-scheme:light dark;--bg:#fff;--s1:#f7f7f7;--s2:#ececec;--inset:#fff;--bd:#dcdcdc;--fg:#111;--mut:#666;--ac:#7d1d2e;--ac2:#962438;--acbd:#a32a3e;--logo:#a32a3e}
+@media (prefers-color-scheme:dark){:root{--bg:#121212;--s1:#1a1a1a;--s2:#242424;--inset:#0d0d0d;--bd:#2e2e2e;--fg:#ededed;--mut:#a1a1a1;--logo:#b3263a}}
+html body{background:var(--bg);color:var(--fg);font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:400}
+.logo{stroke:var(--logo)}
+.card{border:1px solid var(--bd);background:var(--s1);padding:1.5rem}
+.h{font-size:1.5rem;font-weight:400;margin:0 0 1.25rem}
+.lbl{display:block;font-size:13px;font-weight:500;color:var(--mut);margin:0 0 .35rem}
+.inp{width:100%;background:var(--inset);color:var(--fg);border:1px solid var(--bd);padding:.8rem .9rem;font:inherit;font-size:16px;border-radius:0;outline:none;margin-bottom:1rem}
+.inp:focus{border-color:var(--ac2)}
+.code{text-align:center;font-size:1.75rem;letter-spacing:.5em;font-weight:500}
+.btn{display:block;width:100%;padding:.85rem;font:inherit;font-size:15px;font-weight:500;border:1px solid var(--acbd);border-radius:0;background:var(--ac);color:#fff}
+.btn:hover{background:var(--ac2)}
+.btn:active{transform:scale(.99)}
 .btn:disabled{opacity:.5}
-.btn-o{background:transparent;color:var(--fg);border-color:var(--fg)}
-.lnk{background:none;border:0;color:var(--fg);font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;text-decoration:underline;text-underline-offset:5px;padding:.5rem 0}
-.mut{opacity:var(--mut);font-family:system-ui,sans-serif;font-size:.875rem}
-.tag{font-size:11px;font-weight:900;letter-spacing:.2em;padding:.3rem .6rem;border:2px solid var(--fg)}
-.tag-p{background:var(--red);border-color:var(--red);color:#fff}
-.track{height:18px;border:2px solid var(--fg)}
-.fill{height:100%;width:0;background:var(--red);transition:width .5s}
-.toast{position:fixed;bottom:1.5rem;left:5%;right:5%;max-width:24rem;margin:0 auto;text-align:center;padding:1rem;font:800 12px/1.4 system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;z-index:50}
-.toast-ok{background:var(--fg);color:var(--bg);border:2px solid var(--red)}
-.toast-err{background:var(--red);color:#fff;border:2px solid var(--fg)}
-input[type=file]::file-selector-button{background:var(--red);color:#fff;border:0;padding:.6rem 1rem;margin-right:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;border-radius:0}
+.lnk{background:none;border:0;color:var(--fg);font:inherit;font-size:14px;font-weight:500;text-decoration:underline;text-underline-offset:4px;padding:.5rem 0}
+.mut{color:var(--mut);font-size:.92rem}
+.tag{font-size:12px;font-weight:600;letter-spacing:.08em;padding:.25rem .6rem;border:1px solid var(--bd);background:var(--s2)}
+.tag-p{background:var(--ac);border-color:var(--acbd);color:#fff}
+.track{height:12px;border:1px solid var(--bd);background:var(--inset)}
+.fill{height:100%;width:0;background:var(--ac);transition:width .5s}
+.toast{position:fixed;bottom:1.5rem;left:5%;right:5%;max-width:24rem;margin:0 auto;text-align:center;padding:.9rem 1rem;font-size:14px;font-weight:500;z-index:50}
+.toast-ok{background:var(--s2);color:var(--fg);border:1px solid var(--bd)}
+.toast-err{background:var(--ac);color:#fff;border:1px solid var(--acbd)}
+input[type=file]::file-selector-button{background:var(--s2);color:var(--fg);border:1px solid var(--bd);padding:.5rem .9rem;margin-right:.8rem;font:inherit;font-weight:500;border-radius:0}
 </style>
 </head>
 <body class="min-h-screen antialiased" style="padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
-<div class="max-w-md mx-auto px-5 pb-16">
-  <div class="flex justify-end pt-4"><button id="themeBtn" class="lnk">Light / Dark</button></div>
-  <header class="pt-2 pb-8 text-center">
-    <svg class="mx-auto" width="96" height="70" viewBox="100 360 860 570" fill="none" stroke="#e10600" stroke-width="30" stroke-linecap="round" aria-label="MiniDevs logo">
+<div class="max-w-md mx-auto px-5 py-10 min-h-screen flex flex-col justify-center">
+  <header class="pb-8 text-center">
+    <svg class="logo mx-auto" width="84" height="62" viewBox="100 360 860 570" fill="none" stroke-width="30" stroke-linecap="round" aria-label="MiniDevs logo">
       <ellipse cx="552" cy="475" rx="198" ry="93"/>
       <path d="M310 659 C262 715 180 790 133 861"/>
       <path d="M769 701 L880 830 C905 858 918 880 928 906"/>
     </svg>
-    <h1 class="mt-4 text-4xl font-black tracking-[.22em] uppercase">Mini<span style="color:var(--red)">Devs</span></h1>
-    <p class="mt-2 text-xs font-black tracking-[.3em] uppercase" style="opacity:.75">Restricted access // Builders only</p>
+    <h1 class="mt-4 text-3xl" style="font-weight:500">MiniDevs</h1>
   </header>
 
   <section id="loginView" class="card hidden">
@@ -464,9 +462,9 @@ input[type=file]::file-selector-button{background:var(--red);color:#fff;border:0
       <button id="uploadBtn" class="btn">Upload to Roblox</button>
     </section>
 
-    <section id="payPanel" class="card" style="border-color:var(--red)">
+    <section id="payPanel" class="card">
       <h2 class="h">Go Premium</h2>
-      <p style="font-size:2.75rem;font-weight:900;line-height:1">$8.99<span class="mut"> /month</span></p>
+      <p style="font-size:2.75rem;font-weight:500;line-height:1">$8.99<span class="mut"> /month</span></p>
       <ul class="mut mt-3 mb-4" style="line-height:1.8"><li>&#9632; Unlimited daily uploads</li><li>&#9632; Instant activation after checkout</li><li>&#9632; Cancel anytime</li></ul>
       <button id="checkoutBtn" class="btn">Upgrade with Stripe</button>
     </section>
@@ -535,10 +533,6 @@ async function refresh() {
   } catch (e) { toast(e.message, false); }
 }
 
-$('themeBtn').onclick = function () {
-  var d = document.documentElement.classList.toggle('dark');
-  try { localStorage.setItem('md_theme', d ? 'dark' : 'light'); } catch (e) {}
-};
 $('toSignup').onclick = $('toSignup2').onclick = function () { view('signupView'); };
 $('toLogin1').onclick = function () { view('loginView'); };
 $('logoutBtn').onclick = function () { setToken(null); view('loginView'); };
